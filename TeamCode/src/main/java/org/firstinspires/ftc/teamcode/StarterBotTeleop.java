@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
 /*
  * Skeleton TeleOp for the 2026-27 REV DUO FTC Starter Bot.
@@ -24,17 +25,29 @@ public class StarterBotTeleop extends OpMode {
     private DcMotor leftDrive;
     private DcMotor rightDrive;
     private DcMotor intake;
+    private Servo servo;
 
     private static final double INTAKE_POWER = 1.0;
 
     private boolean intakeOn = false;
     private boolean lastCrossButton = false;
 
+    static final double INCREMENT   = 0.01;     // amount to slew servo each CYCLE_MS cycle
+    static final int    CYCLE_MS    =   50;     // period of each cycle
+    static final double MAX_POS     =  1.0;     // Maximum rotational position
+    static final double MIN_POS     =  0.0;     // Minimum rotational position
+
+    // Define class members
+
+    double  position = (MAX_POS - MIN_POS) / 2; // Start at halfway position
+    boolean rampUp = true;
+
     @Override
     public void init() {
-        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
+        leftDrive = hardwareMap.get(DcMotor.class, "leftDrive");
+        rightDrive = hardwareMap.get(DcMotor.class, "rightDrive");
         intake = hardwareMap.get(DcMotor.class, "intake");
+        servo = hardwareMap.get(Servo.class, "servo");
 
         // One side is reversed so that pushing both sticks forward drives the robot forward.
         leftDrive.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -48,24 +61,53 @@ public class StarterBotTeleop extends OpMode {
 
     @Override
     public void loop() {
-        // Tank drive: sticks read negative when pushed forward, so negate.
+        // READ INPUTS.
         double left = -gamepad1.left_stick_y;
         double right = -gamepad1.right_stick_y;
-
-        leftDrive.setPower(left);
-        rightDrive.setPower(right);
-
+        boolean servoLeft = gamepad1.dpad_left;
+        boolean servoRigh = gamepad1.dpad_right;
         // Toggle the intake on the rising edge of the cross button.
         if (gamepad1.cross && !lastCrossButton) {
             intakeOn = !intakeOn;
         }
+
+
+        // NEXT STATE
         lastCrossButton = gamepad1.cross;
 
-        intake.setPower(intakeOn ? INTAKE_POWER : 0.0);
+        // slew the servo, according to the rampUp (direction) variable.
+        if (servoLeft) {
+            // Keep stepping up until we hit the max value
+            if (position < MAX_POS ) {
+                position += INCREMENT ;
 
+            }
+        }
+
+        if (servoRigh) {
+            // Keep stepping up until we hit the max value
+            if (position > MIN_POS ) {
+                position -= INCREMENT ;
+
+            }
+        }
+
+
+        // WRITE OUTPUTS
+        leftDrive.setPower(left);
+        rightDrive.setPower(right);
+        intake.setPower(intakeOn ? INTAKE_POWER : 0.0);
+        servo.setPosition(position);
+
+
+        // TELEMETRY
         telemetry.addData("Drive", "L %.2f | R %.2f", left, right);
         telemetry.addData("Intake", intakeOn ? "ON" : "OFF");
+
+        servo.getPosition();
+        telemetry.addData("posicao", position);
         telemetry.update();
+
     }
 
     @Override
